@@ -123,8 +123,9 @@ int main(){
         if(cmd_num == 0){
         	/* no redirect */
         	if(redir.direct[0] == redir.direct[1] == redir.direct[2] == 0){
-        		if(exe_cmd(0) == EXIT) return 0;
-        		if(exe_cmd(0) == 255) return -1;
+			int return_value=exe_cmd(0);
+        		if(return_value == EXIT) return 0;
+        		else if(return_value == 255) return -1;
         		else continue;
         	}
         	/* redirect */
@@ -155,6 +156,7 @@ int main(){
         	if(pid == 0){
         		close(pipefd[0]);
         		dup2(pipefd[1],STDOUT_FILENO);
+        		close(pipefd[1]);
         		exe_cmd(0);
         		_exit(0);
         	}
@@ -167,8 +169,10 @@ int main(){
         			if(pid == 0){
         				close(pipefd[0]);
         				dup2(prev_pipe_read,STDIN_FILENO);
-        				if(i != cmd_num)
+        				if(i != cmd_num){
         					dup2(pipefd[1],STDOUT_FILENO);
+        					close(pipefd[1]);
+        				}
         				exe_cmd(i);
         				_exit(0);
         			}
@@ -179,7 +183,7 @@ int main(){
         		}
         	}
 			for(i=0;i<=cmd_num;i++)
-        		wait(NULL);
+        			wait(NULL);
         }
     }
 }
