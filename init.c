@@ -205,6 +205,7 @@ int exe_cmd(int num) {
         	while(*tmp!='=' && *tmp) tmp++;
         	if(*tmp!='=') return CONTINUE;
         	*tmp='\0';
+		tmp ++;
         	setenv(args[cmd_start_at[num]+1],tmp,1);
         	return CONTINUE; 
         }
