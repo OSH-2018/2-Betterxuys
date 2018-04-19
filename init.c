@@ -1,9 +1,11 @@
 #include <stdio.h>
-//#include <stdlib>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define max_cmd_num 10
 #define max_cmd_length 64
@@ -54,7 +56,7 @@ int main(){
         		path_length = 0;
         		temp = p+1;
         		while(*temp == ' ') temp++;
-        		while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<')
+        		while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
         			redir.in_path[path_length++]=*temp;
         		redir.in_path[path_length]='\0';
         		while(p != temp){
@@ -69,7 +71,7 @@ int main(){
         			path_length = 0;
         			temp = p+2;
         			while(*temp == ' ') temp++;
-        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<')
+        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
         				redir.out_plus_path[path_length++]=*temp;
         			redir.out_plus_path[path_length]='\0';
         			while(p!=temp){
@@ -82,7 +84,7 @@ int main(){
         			path_length = 0;
         			temp = p+1;
         			while(*temp == ' ') temp++;
-        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<')
+        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
         				redir.out_path[path_length++]=*temp;
         			redir.out_path[path_length]='\0';
         			while(p!=temp){
@@ -132,13 +134,19 @@ int main(){
         	else {
         		pid = fork();
         		if(pid == 0){
-        			if(redir.direct[0] == 1)
-        				freopen(redir.in_path,"r",stdin);
-        			if(redir.direct[1] == 1)
-        				freopen(redir.out_path,"w",stdout);
+        			if(redir.direct[0] == 1){
+        				int in = open(redir.in_path,O_RDONLY);
+        				dup2(in,STDIN_FILENO);
+        			}
+        			if(redir.direct[1] == 1){
+        				int out = open(redir.out_path,O_CREAT | O_WRONLY);
+        				dup2(out,STDOUT_FILENO);
+        			}
         			else
-        				if(redir.direct[2] == 1)
-        					freopen(redir.out_plus_path,"a+",stdout);
+        				if(redir.direct[2] == 1){
+        					int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND);
+        					dup2(out_plus,STDOUT_FILENO);
+        				}
         			exe_cmd(0);
         			_exit(0);
         		}
@@ -157,6 +165,10 @@ int main(){
         		close(pipefd[0]);
         		dup2(pipefd[1],STDOUT_FILENO);
         		close(pipefd[1]);
+        		if(redir.direct[0] == 1){
+        				int in = open(redir.in_path,O_RDONLY);
+        				dup2(in,STDIN_FILENO);
+        		}
         		exe_cmd(0);
         		_exit(0);
         	}
@@ -172,6 +184,15 @@ int main(){
         				if(i != cmd_num){
         					dup2(pipefd[1],STDOUT_FILENO);
         					close(pipefd[1]);
+        					if(redir.direct[1] == 1){
+        						int out = open(redir.out_path,O_CREAT | O_WRONLY);
+        						dup2(out,STDOUT_FILENO);
+        					}
+        					else
+        						if(redir.direct[2] == 1){
+        							int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND);
+        							dup2(out_plus,STDOUT_FILENO);
+        						}
         				}
         				exe_cmd(i);
         				_exit(0);
