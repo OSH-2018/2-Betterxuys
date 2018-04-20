@@ -56,8 +56,10 @@ int main(){
         		path_length = 0;
         		temp = p+1;
         		while(*temp == ' ') temp++;
-        		while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
+        		while(*temp != ' ' && *temp != '>' && *temp !='|' && *temp !='<' && *temp !='\0'){
         			redir.in_path[path_length++]=*temp;
+        			temp++;
+        		}
         		redir.in_path[path_length]='\0';
         		while(p != temp){
         			*p = ' ';
@@ -71,8 +73,10 @@ int main(){
         			path_length = 0;
         			temp = p+2;
         			while(*temp == ' ') temp++;
-        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
+        			while(*temp != ' ' && *temp != '>' && *temp !='|' && *temp !='<' && *temp !='\0'){
         				redir.out_plus_path[path_length++]=*temp;
+        				temp++;
+        			}
         			redir.out_plus_path[path_length]='\0';
         			while(p!=temp){
         				*p = ' ';
@@ -84,8 +88,10 @@ int main(){
         			path_length = 0;
         			temp = p+1;
         			while(*temp == ' ') temp++;
-        			while(*temp != ' ' || *temp != '>' || *temp !='|' || *temp !='<' || *temp !='\0')
+        			while(*temp != ' ' && *temp != '>' && *temp !='|' && *temp !='<' && *temp !='\0'){
         				redir.out_path[path_length++]=*temp;
+        				temp++;
+        			}
         			redir.out_path[path_length]='\0';
         			while(p!=temp){
         				*p = ' ';
@@ -101,6 +107,7 @@ int main(){
         }   
         /* 拆解命令行 */
         args[0] = cmd;
+        while(*args[0] == ' ') args[0] ++ ;
         for (i = 0; *args[i]; i++)
             for (args[i+1] = args[i] + 1; *args[i+1]; args[i+1]++)
 		        if(*args[i+1] == ' '){                
@@ -139,12 +146,12 @@ int main(){
         				dup2(in,STDIN_FILENO);
         			}
         			if(redir.direct[1] == 1){
-        				int out = open(redir.out_path,O_CREAT | O_WRONLY);
+        				int out = open(redir.out_path,O_CREAT | O_WRONLY | O_TRUNC,0664);
         				dup2(out,STDOUT_FILENO);
         			}
         			else
         				if(redir.direct[2] == 1){
-        					int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND);
+        					int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND,0664);
         					dup2(out_plus,STDOUT_FILENO);
         				}
         			exe_cmd(0);
@@ -162,13 +169,15 @@ int main(){
         	pipe(pipefd);
         	pid = fork();
         	if(pid == 0){
-        		close(pipefd[0]);
-        		dup2(pipefd[1],STDOUT_FILENO);
-        		close(pipefd[1]);
         		if(redir.direct[0] == 1){
         				int in = open(redir.in_path,O_RDONLY);
         				dup2(in,STDIN_FILENO);
         		}
+        		
+        		close(pipefd[0]);
+        		dup2(pipefd[1],STDOUT_FILENO);
+        		close(pipefd[1]);
+        		
         		exe_cmd(0);
         		_exit(0);
         	}
@@ -181,19 +190,22 @@ int main(){
         			if(pid == 0){
         				close(pipefd[0]);
         				dup2(prev_pipe_read,STDIN_FILENO);
-        				if(i != cmd_num){
+        				if(i != cmd_num)
         					dup2(pipefd[1],STDOUT_FILENO);
-        					close(pipefd[1]);
+        				close(pipefd[1]);
+        				
+        				if(i == cmd_num){
         					if(redir.direct[1] == 1){
-        						int out = open(redir.out_path,O_CREAT | O_WRONLY);
+        						int out = open(redir.out_path,O_CREAT | O_WRONLY | O_TRUNC ,0664);
         						dup2(out,STDOUT_FILENO);
         					}
         					else
         						if(redir.direct[2] == 1){
-        							int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND);
+        							int out_plus = open(redir.out_plus_path,O_CREAT | O_WRONLY | O_APPEND ,0664);
         							dup2(out_plus,STDOUT_FILENO);
         						}
         				}
+        				
         				exe_cmd(i);
         				_exit(0);
         			}
